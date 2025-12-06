@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin</title>
+</head>
+<body>
+    <div style="max-width:900px;margin:24px auto;font-family:Arial,Helvetica,sans-serif">
+        <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <h1>Admin pannel</h1>
+            <h1>My Portfolio</h1>
+            <small>Manage projects — add, edit, or delete</small>
+        </header>
+
+        <section style="margin-bottom:24px;padding:12px;border:1px solid #eee;border-radius:6px;background:#fafafa">
+            <h2 style="margin-top:0">Add Project</h2>
+            <form id="addForm" action="other/project/submit" method="POST">
+                <div>
+                    <label for="headline">Headline</label><br>
+                    <input style="width:100%" type="text" id="headline" name="headline" required>
+                </div>
+                <div style="margin-top:8px">
+                    <label for="videoLink">Video Link</label><br>
+                    <input style="width:100%" type="url" id="videoLink" name="videoLink" required>
+                </div>
+                <div style="margin-top:10px">
+                    <button type="submit">Submit Project</button>
+                </div>
+            </form>
+        </section>
+
+        <section>
+            <h2>Projects</h2>
+            <div id="projectsWrap">
+                <table id="projectsTable" style="width:100%;border-collapse:collapse">
+                    <thead>
+                        <tr style="text-align:left;border-bottom:1px solid #ddd">
+                            <th style="padding:6px">#</th>
+                            <th style="padding:6px">Name</th>
+                            <th style="padding:6px">Video</th>
+                            <th style="padding:6px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectsBody"></tbody>
+                </table>
+                <div id="emptyMsg" style="margin-top:8px;color:#666;display:none">No projects yet.</div>
+            </div>
+        </section>
+
+        <!-- Edit modal (simple) -->
+        <div id="editModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center">
+            <div style="background:#fff;padding:16px;border-radius:6px;max-width:600px;width:90%">
+                <h3>Edit Project</h3>
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div>
+                        <label for="editName">Headline</label><br>
+                        <input id="editName" name="headline" style="width:100%" required>
+                    </div>
+                    <div style="margin-top:8px">
+                        <label for="editVideo">Video Link</label><br>
+                        <input id="editVideo" name="videoLink" style="width:100%" type="url" required>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+                        <button type="button" id="cancelEdit">Cancel</button>
+                        <button type="submit">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+<script>
+const projectsBody = document.getElementById('projectsBody');
+const emptyMsg = document.getElementById('emptyMsg');
+const editModal = document.getElementById('editModal');
+const editForm = document.getElementById('editForm');
+
+async function loadProjects(){
+    try{
+        const res = await fetch('/other/projects');
+        if(!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        renderProjects(data || []);
+    }catch(err){
+        console.error(err);
+        renderProjects([]);
+    }
+}
+
+function renderProjects(items){
+    projectsBody.innerHTML='';
+    if(!items || items.length===0){
+        emptyMsg.style.display='block';
+        return;
+    }
+    emptyMsg.style.display='none';
+    items.forEach((p, idx)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="padding:6px;vertical-align:top">${p.id}</td>
+            <td style="padding:6px;vertical-align:top">${escapeHtml(p.headline||'')}</td>
+            <td style="padding:6px;vertical-align:top">${p.videoLink?`<a href="${escapeAttr(p.videoLink)}" target="_blank">Video</a>`:''}</td>
+            <td style="padding:6px;vertical-align:top">
+                <button data-id="${p.id}" class="editBtn">Edit</button>
+                <button data-id="${p.id}" class="deleteBtn">Delete</button>
+            </td>
+        `;
+        projectsBody.appendChild(tr);
+    });
+
+    // wire buttons
+    document.querySelectorAll('.deleteBtn').forEach(b=>b.addEventListener('click', onDelete));
+    document.querySelectorAll('.editBtn').forEach(b=>b.addEventListener('click', onEdit));
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]); }
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+async function onDelete(e){
+    const id = e.currentTarget.dataset.id;
+    if(!confirm('Delete project #' + id + '?')) return;
+    try{
+        const res = await fetch(`/other/project/delete/${id}`,{method:'POST'});
+        if(!res.ok) throw new Error('Delete failed');
+        await loadProjects();
+    }catch(err){
+        console.error(err);
+        alert('Delete failed');
+    }
+}
+
+function onEdit(e){
+    const id = e.currentTarget.dataset.id;
+    // populate modal with selected project data
+    const row = e.currentTarget.closest('tr');
+    const name = row.children[1].textContent;
+    const videoLink = row.children[2].querySelector('a')?.href || '';
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editVideo').value = videoLink;
+    editModal.style.display = 'flex';
+}
+
+document.getElementById('cancelEdit').addEventListener('click', ()=>{ editModal.style.display='none'; });
+
+editForm.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const id = document.getElementById('editId').value;
+    const payload = {
+        headline: document.getElementById('editName').value,
+        videoLink: document.getElementById('editVideo').value
+    };
+    try{
+        const res = await fetch(`/other/project/update/${id}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        if(!res.ok) throw new Error('Update failed');
+        editModal.style.display='none';
+        await loadProjects();
+    }catch(err){
+        console.error(err);
+        alert('Update failed');
+    }
+});
+
+// Load projects on open
+loadProjects();
+
+</script>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

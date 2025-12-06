@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Merged</title>
+</head>
+<body>
+    <div style="max-width:900px;margin:24px auto;font-family:Arial,Helvetica,sans-serif">
+        <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+            <h1 style="margin:0">Admin Panel</h1>
+            <h2 style="margin:0">My Portfolio</h2>
+            <small>Manage projects — add, edit, or delete — drag to reorder</small>
+        </header>
+
+        <!-- API Selector -->
+        <div style="margin-bottom:20px;padding:12px;background:#e3f2fd;border-radius:6px">
+            <label for="apiSelect" style="font-weight:bold;margin-right:8px">Choose API Version:</label>
+            <select id="apiSelect" style="padding:6px;border-radius:4px;border:1px solid #2196F3">
+                <option value="v1">Version 1 API (/project/...)</option>
+                <option value="v2">Version 2 API (/other/project/...)</option>
+            </select>
+        </div>
+
+        <section style="margin-bottom:24px;padding:12px;border:1px solid #eee;border-radius:6px;background:#fafafa">
+            <h2 style="margin-top:0">Add Project</h2>
+            <form id="addForm">
+                <div>
+                    <label for="projectName" id="fieldLabel">Project Name</label><br>
+                    <input style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" type="text" id="projectName" name="projectName" required>
+                </div>
+                <div style="margin-top:8px">
+                    <label for="videoLink">Video Link</label><br>
+                    <input style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" type="url" id="videoLink" name="videoLink" required>
+                </div>
+                <div style="margin-top:10px">
+                    <button type="submit" style="padding:10px 20px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer">Submit Project</button>
+                </div>
+            </form>
+        </section>
+
+        <section>
+            <h2>Projects</h2>
+            <div id="projectsWrap">
+                <table id="projectsTable" style="width:100%;border-collapse:collapse">
+                    <thead>
+                        <tr style="text-align:left;border-bottom:2px solid #ddd;background:#f5f5f5">
+                            <th style="padding:10px">#</th>
+                            <th style="padding:10px" id="nameHeader">Name</th>
+                            <th style="padding:10px">Video</th>
+                            <th style="padding:10px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectsBody"></tbody>
+                </table>
+                <div id="emptyMsg" style="margin-top:8px;color:#666;text-align:center;padding:20px">No projects yet.</div>
+            </div>
+        </section>
+
+        <!-- Edit modal -->
+        <div id="editModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:1000">
+            <div style="background:#fff;padding:24px;border-radius:8px;max-width:600px;width:90%;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
+                <h3 style="margin-top:0">Edit Project</h3>
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div>
+                        <label for="editName" id="editFieldLabel">Project Name</label><br>
+                        <input id="editName" name="projectName" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" required>
+                    </div>
+                    <div style="margin-top:8px">
+                        <label for="editVideo">Video Link</label><br>
+                        <input id="editVideo" name="videoLink" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px" type="url" required>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+                        <button type="button" id="cancelEdit" style="padding:10px 20px;background:#999;color:white;border:none;border-radius:4px;cursor:pointer">Cancel</button>
+                        <button type="submit" style="padding:10px 20px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+  <div style="display: flex; justify-content: center; align-items: center; margin-top: 50px;">
+  <form action="/upload" method="post" enctype="multipart/form-data" style="background: #f3f4f6; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; font-family: Arial, sans-serif;">
+    <h2 style="margin-bottom: 20px; color: #111827;">Upload Your Resume</h2>
+    <p style="margin-bottom: 15px; font-size: 0.9rem; color: #6b7280;">Only PDF files (recommended 2 pages)</p>
+    <input type="file" name="file" accept="application/pdf" required style="margin-bottom: 20px; width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #d1d5db;">
+    <button type="submit" style="background-color: #22C55E; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; transition: background 0.3s;">
+      Upload
+    </button>
+    <p style="margin-top: 15px; font-size: 0.8rem; color: #9ca3af;">Max size ~500KB (2-page PDF)</p>
+  </form>
+</div>
+
+    </div>
+
+
+
+
+<script>
+const projectsBody = document.getElementById('projectsBody');
+const emptyMsg = document.getElementById('emptyMsg');
+const editModal = document.getElementById('editModal');
+const editForm = document.getElementById('editForm');
+const addForm = document.getElementById('addForm');
+const apiSelect = document.getElementById('apiSelect');
+const fieldLabel = document.getElementById('fieldLabel');
+const editFieldLabel = document.getElementById('editFieldLabel');
+const nameHeader = document.getElementById('nameHeader');
+
+let currentAPI = 'v1';
+let draggedElement = null;
+let draggedId = null;
+
+// Update labels based on API version
+function updateLabels() {
+    if (currentAPI === 'v1') {
+        fieldLabel.textContent = 'Project Name';
+        editFieldLabel.textContent = 'Project Name';
+        nameHeader.textContent = 'Name';
+    } else {
+        fieldLabel.textContent = 'Headline';
+        editFieldLabel.textContent = 'Headline';
+        nameHeader.textContent = 'Headline';
+    }
+}
+
+// Get API endpoints based on version
+function getEndpoints() {
+    if (currentAPI === 'v1') {
+        return {
+            list: '/projects',
+            submit: '/project/submit',
+            delete: (id) => `/project/delete/${id}`,
+            update: (id) => `/project/update/${id}`,
+            fieldName: 'projectName'
+        };
+    } else {
+        return {
+            list: '/other/projects',
+            submit: '/other/project/submit',
+            delete: (id) => `/other/project/delete/${id}`,
+            update: (id) => `/other/project/update/${id}`,
+            fieldName: 'headline'
+        };
+    }
+}
+
+async function loadProjects(){
+    const endpoints = getEndpoints();
+    try{
+        const res = await fetch(endpoints.list);
+        if(!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        renderProjects(data || []);
+    }catch(err){
+        console.error(err);
+        renderProjects([]);
+    }
+}
+
+function renderProjects(items){
+    const endpoints = getEndpoints();
+    projectsBody.innerHTML='';
+    if(!items || items.length===0){
+        emptyMsg.style.display='block';
+        return;
+    }
+    emptyMsg.style.display='none';
+    items.forEach((p, idx)=>{
+        const tr = document.createElement('tr');
+        const nameValue = p[endpoints.fieldName] || p.projectName || p.headline || '';
+        tr.style.borderBottom = '1px solid #eee';
+        tr.style.cursor = 'move';
+        tr.draggable = true;
+        tr.dataset.id = p.id;
+        tr.innerHTML = `
+            <td style="padding:10px;vertical-align:top">${p.id}</td>
+            <td style="padding:10px;vertical-align:top">${escapeHtml(nameValue)}</td>
+            <td style="padding:10px;vertical-align:top">${p.videoLink?`<a href="${escapeAttr(p.videoLink)}" target="_blank" style="color:#2196F3;text-decoration:none">View Video</a>`:''}</td>
+            <td style="padding:10px;vertical-align:top">
+                <button data-id="${p.id}" class="editBtn" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:4px">Edit</button>
+                <button data-id="${p.id}" class="deleteBtn" style="padding:6px 12px;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer">Delete</button>
+            </td>
+        `;
+        
+        // Drag events
+        tr.addEventListener('dragstart', onDragStart);
+        tr.addEventListener('dragover', onDragOver);
+        tr.addEventListener('drop', onDrop);
+        tr.addEventListener('dragend', onDragEnd);
+        
+        projectsBody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.deleteBtn').forEach(b=>b.addEventListener('click', onDelete));
+    document.querySelectorAll('.editBtn').forEach(b=>b.addEventListener('click', onEdit));
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]); }
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+async function onDelete(e){
+    const id = e.currentTarget.dataset.id;
+    if(!confirm('Delete project #' + id + '?')) return;
+    const endpoints = getEndpoints();
+    try{
+        const res = await fetch(endpoints.delete(id),{method:'POST'});
+        if(!res.ok) throw new Error('Delete failed');
+        await loadProjects();
+    }catch(err){
+        console.error(err);
+        alert('Delete failed');
+    }
+}
+
+function onEdit(e){
+    const id = e.currentTarget.dataset.id;
+    const row = e.currentTarget.closest('tr');
+    const name = row.children[1].textContent;
+    const videoLink = row.children[2].querySelector('a')?.href || '';
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editVideo').value = videoLink;
+    editModal.style.display = 'flex';
+}
+
+document.getElementById('cancelEdit').addEventListener('click', ()=>{ editModal.style.display='none'; });
+
+editForm.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const id = document.getElementById('editId').value;
+    const endpoints = getEndpoints();
+    const payload = {
+        [endpoints.fieldName]: document.getElementById('editName').value,
+        videoLink: document.getElementById('editVideo').value
+    };
+    try{
+        const res = await fetch(endpoints.update(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        if(!res.ok) throw new Error('Update failed');
+        editModal.style.display='none';
+        await loadProjects();
+    }catch(err){
+        console.error(err);
+        alert('Update failed');
+    }
+});
+
+addForm.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const endpoints = getEndpoints();
+    const payload = {
+        [endpoints.fieldName]: document.getElementById('projectName').value,
+        videoLink: document.getElementById('videoLink').value
+    };
+    try{
+        const res = await fetch(endpoints.submit,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        if(!res.ok) throw new Error('Submit failed');
+        addForm.reset();
+        await loadProjects();
+    }catch(err){
+        console.error(err);
+        alert('Submit failed');
+    }
+});
+
+apiSelect.addEventListener('change', ()=>{
+    currentAPI = apiSelect.value;
+    updateLabels();
+    loadProjects();
+});
+
+// Drag and drop handlers
+function onDragStart(e) {
+    draggedElement = e.currentTarget;
+    draggedId = e.currentTarget.dataset.id;
+    e.currentTarget.style.opacity = '0.5';
+}
+
+function onDragOver(e) {
+    e.preventDefault();
+    const target = e.currentTarget;
+    if (target !== draggedElement) {
+        target.style.backgroundColor = '#e3f2fd';
+    }
+}
+
+function onDrop(e) {
+    e.preventDefault();
+    const target = e.currentTarget;
+    target.style.backgroundColor = '';
+    
+    if (target !== draggedElement) {
+        const toId = target.dataset.id;
+        const preId = draggedId;
+        reorderProject(preId, toId);
+    }
+}
+
+function onDragEnd(e) {
+    e.currentTarget.style.opacity = '';
+    document.querySelectorAll('#projectsBody tr').forEach(row => {
+        row.style.backgroundColor = '';
+    });
+}
+
+async function reorderProject(preId, toId) {
+    const endpoints = getEndpoints();
+    const rankEndpoint = currentAPI === 'v1' ? '/rankFile' : '/other/rankFile';
+    
+    try {
+        const res = await fetch(`${rankEndpoint}?pre_id=${preId}&to_id=${toId}`, {
+            method: 'GET'
+        });
+        if (!res.ok) throw new Error('Reorder failed');
+        await loadProjects();
+    } catch (err) {
+        console.error(err);
+        alert('Reorder failed');
+    }
+}
+
+// Initial load
+updateLabels();
+loadProjects();
+
+</script>
+</body>
+</html>
